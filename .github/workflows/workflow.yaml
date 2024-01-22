@@ -1,0 +1,33 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build the Docker image
+        run: docker build . --file Dockerfile --tag android-emulator:latest
+
+      - name: Run the Docker container
+        run: docker run --privileged android-emulator:latest bash
+
+      - name: Dump docker logs using different shell
+        uses: jwalton/gh-docker-logs@v2
+        with:
+          shell: '/bin/sh'
